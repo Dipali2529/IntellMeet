@@ -1,72 +1,125 @@
-import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
-import { Meeting } from '../models/Meeting';
+import { Response } from "express";
+import { Meeting } from "../models/Meeting";
+import { AuthRequest } from "../middleware/auth";
 
-export const createMeeting = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { title, scheduledAt } = req.body;
-    const hostId = req.user?.userId;
+const generateMeetingCode = (): string => {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    const meeting = await Meeting.create({
-      title,
-      hostId,
-      scheduledAt: scheduledAt || new Date(),
-      participants: [hostId],
-    });
+  let code = "INT-";
 
-    res.status(201).json({ message: 'Meeting created successfully', meeting });
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating meeting', error });
+  for (let i = 0; i < 6; i++) {
+    code += characters.charAt(
+      Math.floor(Math.random() * characters.length)
+    );
   }
+
+  return code;
 };
 
-export const getMeetings = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createMeeting = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
-    const userId = req.user?.userId;
-    const meetings = await Meeting.find({
-      $or: [{ hostId: userId }, { participants: userId }],
-    }).populate('hostId', 'name email avatarUrl');
-
-    res.status(200).json({ meetings });
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching meetings', error });
-  }
-};
-
-export const getMeetingById = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const meeting = await Meeting.findById(id)
-      .populate('hostId', 'name email avatarUrl')
-      .populate('participants', 'name email avatarUrl');
-
-    if (!meeting) {
-      res.status(404).json({ message: 'Meeting not found' });
+    if (!req.user) {
+      res.status(401).json({
+        message: "Unauthorized",
+      });
       return;
     }
 
-    res.status(200).json({ meeting });
+    const {
+      title,
+      description,
+      scheduledDate,
+      scheduledTime,
+      duration,
+      allowChat,
+      allowScreenShare,
+      allowRecording,
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      res.status(400).json({
+        message: "Meeting title is required",
+      });
+      return;
+    }
+
+    let meetingCode = generateMeetingCode();
+
+    let existingMeeting = await Meeting.findOne({
+      meetingCode,
+    });
+
+    while (existingMeeting) {
+      meetingCode = generateMeetingCode();
+
+      existingMeeting = await Meeting.findOne({
+        meetingCode,
+      });
+    }
+
+    const meeting = await Meeting.create({
+      title: title.trim(),
+      description,
+      host: req.user.userId,
+      meetingCode,
+      scheduledDate,
+      scheduledTime,
+      duration: duration || 60,
+      allowChat: allowChat ?? true,
+      allowScreenShare: allowScreenShare ?? true,
+      allowRecording: allowRecording ?? false,
+    });
+
+    res.status(201).json({
+      message: "Meeting created successfully",
+      meeting,
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching meeting', error });
+    console.error("Create meeting error:", error);
+
+    res.status(500).json({
+      message: "Server error while creating meeting",
+    });
   }
 };
 
-export const updateMeeting = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getMeetingByCode = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
-    const { id } = req.params;
-    const meeting = await Meeting.findByIdAndUpdate(id, req.body, { new: true });
-    res.status(200).json({ message: 'Meeting updated successfully', meeting });
-  } catch (error) {
-    res.status(500).json({ message: 'Error updating meeting', error });
-  }
-};
+   const meetingCode = String(req.params.meetingCode).trim().toUpperCase();
 
-export const deleteMeeting = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    await Meeting.findByIdAndDelete(id);
-    res.status(200).json({ message: 'Meeting deleted successfully' });
+    if (!meetingCode) {
+      res.status(400).json({
+        message: "Meeting code is required.",
+      });
+      return;
+    }
+
+    const meeting = await Meeting.findOne({
+      meetingCode,
+    });
+
+    if (!meeting) {
+      res.status(404).json({
+        message: "Meeting not found. Please check the meeting code.",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Meeting found successfully",
+      meeting,
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting meeting', error });
+    console.error("Get meeting by code error:", error);
+
+    res.status(500).json({
+      message: "Server error while finding meeting.",
+    });
   }
 };

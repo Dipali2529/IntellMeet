@@ -1,21 +1,23 @@
-import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { Router } from "express";
 import {
   createMeeting,
-  getMeetings,
-  getMeetingById,
-  updateMeeting,
-  deleteMeeting,
-} from '../controllers/meetingController';
+  getMeetingByCode,
+} from "../controllers/meetingController";
+
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
-router.use(authenticate);
+router.get(
+  "/code/:meetingCode",
+  authenticate,
+  getMeetingByCode
+);
 
-router.post('/', createMeeting);
-router.get('/', getMeetings);
-router.get('/:id', getMeetingById);
-router.put('/:id', updateMeeting);
-router.delete('/:id', deleteMeeting);
+router.post(
+  "/",
+  authenticate,
+  createMeeting
+);
 
 export default router;

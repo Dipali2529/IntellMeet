@@ -1,58 +1,72 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
+
 dotenv.config();
 
-import express, { Request, Response } from 'express';
-import http from 'http';
-import cors from 'cors';
-import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
-import { Server as SocketServer } from 'socket.io';
-import { connectDB } from './config/db';
-import { connectRedis } from './config/redis';
-import authRoutes from './routes/authRoutes';
-import meetingRoutes from './routes/meetingRoutes';
-import userRoutes from './routes/userRoutes';
-import { setupSocketHandlers } from './sockets/meetingSocket';
+import express from "express";
+import transcriptionRoutes from "./routes/transcriptionRoutes";
+import meetingSummaryRoutes from "./routes/meetingSummaryRoutes";
+import http from "http";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+//import dotenv from "dotenv";
+import { Server } from "socket.io";
+
+import setupSocket from "./services/socket";
+import authRoutes from "./routes/authRoutes";
+import meetingRoutes from "./routes/meetingRoutes";
+
+import { connectDB } from "./config/db";
+
+dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
 
-// Middlewares
-app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+app.use("/api/transcription", transcriptionRoutes);
+app.use(
+  "/api/meeting-summary",
+  meetingSummaryRoutes
+);
+
 app.use(cookieParser());
 
-// REST Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/meetings', meetingRoutes);
-app.use('/api/users', userRoutes);
+// Authentication routes
+app.use("/api/auth", authRoutes);
+app.use("/api/meetings", meetingRoutes);
 
-// Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', service: 'IntellMeet Backend API', timestamp: new Date() });
+app.get("/", (req, res) => {
+  res.json({
+    message: "IntellMeet Server is running",
+  });
 });
 
-// Socket.io Server Setup
-const io = new SocketServer(server, {
+const server = http.createServer(app);
+
+const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
 
-setupSocketHandlers(io);
+// Initialize Socket.io events
+setupSocket(io);
 
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 
-// Connect Services & Start Server
 const startServer = async () => {
   await connectDB();
-  await connectRedis();
 
   server.listen(PORT, () => {
-    console.log(`[Server] Running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(`IntellMeet server running on port ${PORT}`);
   });
 };
 
