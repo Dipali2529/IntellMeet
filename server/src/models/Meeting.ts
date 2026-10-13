@@ -11,6 +11,15 @@ export interface IMeeting extends Document {
   allowChat: boolean;
   allowScreenShare: boolean;
   allowRecording: boolean;
+
+ actionItems: {
+  _id?: mongoose.Types.ObjectId;
+  task: string;
+  assignee: string;
+  dueDate: string;
+  status: "Pending" | "In Progress" | "Completed";
+}[];
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +63,30 @@ const meetingSchema = new Schema<IMeeting>(
     duration: {
       type: Number,
       default: 60,
+    },
+        actionItems: {
+      type: [
+        {
+          task: {
+            type: String,
+            required: true,
+          },
+          assignee: {
+            type: String,
+            default: "",
+          },
+          dueDate: {
+            type: String,
+            default: "",
+          },
+          status: {
+            type: String,
+            enum: ["Pending", "In Progress", "Completed"],
+            default: "Pending",
+          },
+        },
+      ],
+      default: [],
     },
 
     allowChat: {

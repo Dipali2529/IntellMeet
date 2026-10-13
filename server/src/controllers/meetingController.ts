@@ -123,3 +123,111 @@ export const getMeetingByCode = async (
     });
   }
 };
+
+
+export const updateActionItemStatus = async (
+req: AuthRequest,
+res: Response
+): Promise<void> => {
+try {
+if (!req.user) {
+res.status(401).json({ message: "Unauthorized" });
+return;
+}
+
+
+const meetingId = String(req.params.meetingId ?? "");
+const actionItemId = String(req.params.actionItemId ?? "");
+const { status } = req.body;
+
+const allowedStatuses = [
+  "Pending",
+  "In Progress",
+  "Completed",
+];
+
+if (!allowedStatuses.includes(status)) {
+  res.status(400).json({
+    message: "Invalid status. Use Pending, In Progress, or Completed.",
+  });
+  return;
+}
+
+if (!/^[a-f\d]{24}$/i.test(meetingId) ||
+    !/^[a-f\d]{24}$/i.test(actionItemId)) {
+  res.status(400).json({
+    message: "Invalid meeting ID or action item ID.",
+  });
+  return;
+}
+
+const meeting = await Meeting.findById(meetingId);
+
+if (!meeting) {
+  res.status(404).json({ message: "Meeting not found." });
+  return;
+}
+
+const isHost = meeting.host.toString() === req.user.userId;
+
+if (!isHost && req.user.role !== "Admin") {
+  res.status(403).json({
+    message: "Only the meeting host or an admin can update action items.",
+  });
+  return;
+}
+
+const actionItem = meeting.actionItems.find(
+  (item) => item._id?.toString() === actionItemId
+);
+
+if (!actionItem) {
+  res.status(404).json({ message: "Action item not found." });
+  return;
+}
+
+actionItem.status = status;
+await meeting.save();
+
+res.status(200).json({
+  message: "Action item status updated successfully.",
+  data: actionItem,
+});
+
+} catch (error) {
+console.error("Update action item status error:", error);
+res.status(500).json({
+message: "Failed to update action item status.",
+});
+}
+};
+
+export const getMyMeetings = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    const meetings = await Meeting.find({
+      host: req.user.userId,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "Previous meetings fetched successfully",
+      count: meetings.length,
+      meetings,
+    });
+  } catch (error) {
+    console.error("Get previous meetings error:", error);
+
+    res.status(500).json({
+      message: "Server error while fetching previous meetings",
+    });
+  }
+};

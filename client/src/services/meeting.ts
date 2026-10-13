@@ -94,3 +94,33 @@ export async function getMeetingByCode(
 
   return data.meeting;
 }
+
+export interface MyMeetingsResponse {
+  message: string;
+  count: number;
+  meetings: Meeting[];
+}
+
+export async function getMyMeetings(): Promise<Meeting[]> {
+  const accessToken = getAccessToken();
+
+  if (!accessToken) {
+    throw new Error("You are not logged in.");
+  }
+
+  const response = await fetch(API_URL, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch previous meetings.");
+  }
+
+  return data.meetings;
+}

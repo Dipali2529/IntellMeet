@@ -16,6 +16,7 @@ import authRoutes from "./routes/authRoutes";
 import meetingRoutes from "./routes/meetingRoutes";
 
 import { connectDB } from "./config/db";
+import workspaceRoutes from "./routes/workspaceRoutes";
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ app.use(
   "/api/meeting-summary",
   meetingSummaryRoutes
 );
-
+app.use("/api/workspace", workspaceRoutes);
 app.use(cookieParser());
 
 // Authentication routes

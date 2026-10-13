@@ -1,8 +1,10 @@
-import express from "express";
+
+import { Router } from "express";
 import { generateSummary } from "../controllers/meetingSummaryController";
+import { authenticate } from "../middleware/auth";
 
-const router = express.Router();
+const router = Router();
 
-router.post("/summary", generateSummary);
+router.post("/summary", authenticate, generateSummary);
 
 export default router;

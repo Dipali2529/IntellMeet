@@ -14,6 +14,7 @@ import Signup from "./pages/auth/Signup";
 import JoinMeeting from "./pages/meeting/JoinMeeting";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Workspace from "./pages/dashboard/Workspace";
 
 function App() {
   return (
@@ -31,7 +32,7 @@ function App() {
                   {/* ==================== */}
 
          <Route element={<ProtectedRoute />}></Route>
-
+        <Route path="/workspace" element={<Workspace />} />
         {/* Application */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 

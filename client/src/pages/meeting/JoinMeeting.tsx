@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMeetingByCode } from "../../services/meeting";
 
@@ -6,6 +6,17 @@ function JoinMeeting() {
   const navigate = useNavigate();
 
   const [meetingCode, setMeetingCode] = useState("");
+
+      
+    useEffect(() => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+
+      if (code) {
+        setMeetingCode(code.trim().toUpperCase());
+      }
+    }, []);
+  const [directJoin, setDirectJoin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -14,7 +25,8 @@ function JoinMeeting() {
 
     setError("");
 
-    const code = meetingCode.trim().toUpperCase();
+   const params = new URLSearchParams(window.location.search);
+    const code = (params.get("code") || meetingCode).trim().toUpperCase();
 
     if (!code) {
       setError("Please enter the meeting code.");
@@ -65,15 +77,13 @@ function JoinMeeting() {
             </label>
 
             <input
-              type="text"
-              value={meetingCode}
-              onChange={(e) =>
-                setMeetingCode(e.target.value.toUpperCase())
-              }
-              placeholder="INT-ABC123"
-              maxLength={10}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 uppercase outline-none focus:border-blue-500"
-            />
+                type="text"
+                value={meetingCode}
+                onChange={(e) => setMeetingCode(e.target.value.toUpperCase())}
+                placeholder="INT-ABC123"
+                maxLength={10}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 uppercase outline-none focus:border-blue-500"
+              />
           </div>
 
           {error && (

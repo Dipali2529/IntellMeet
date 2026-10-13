@@ -1,3 +1,6 @@
+import { getAccessToken } from "../../services/auth";
+import { generateMeetingSummary } from "../../services/meetingSummaryService";
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -27,6 +30,14 @@ interface ChatMessage {
   time: string;
 }
 
+type ActionItem = {
+  _id?: string;
+  task: string;
+  assignee: string;
+  dueDate: string;
+  status: "Pending" | "In Progress" | "Completed";
+};
+
 function MeetingRoom() {
   const navigate = useNavigate();
 
@@ -51,10 +62,10 @@ function MeetingRoom() {
 
 
   const localStreamRef = useRef<MediaStream | null>(null);
-  const screenStreamRef = useRef<MediaStream | null>(null);
+
   const remoteSocketIdRef = useRef<string | null>(null);
   const pendingIceCandidatesRef = useRef<RTCIceCandidate[]>([]);
-  const [mediaReady, setMediaReady] = useState(false);
+ 
   // ==========================================
   // STATE
   // ==========================================
@@ -67,7 +78,7 @@ function MeetingRoom() {
   const [microphoneEnabled, setMicrophoneEnabled] =
     useState(true);
 
-    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    
 
   const [participants, setParticipants] =
     useState<string[]>([]);
@@ -97,7 +108,10 @@ function MeetingRoom() {
 
     const [transcript, setTranscript] = useState("");
     const [isTranscribing, setIsTranscribing] = useState(false);
-
+    const [summary, setSummary] = useState("");
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    
+    const [actionItems, setActionItems] = useState<ActionItem[]>([]);
 
     const handleTranscription = async (audioBlob: Blob) => {
   try {
@@ -159,7 +173,7 @@ function MeetingRoom() {
             localVideoRef.current.srcObject = stream;
           }
 
-          setMediaReady(true);
+          
         } catch (error) {
           console.error(
             "Error accessing camera/microphone:",
@@ -430,7 +444,9 @@ function MeetingRoom() {
         })
       );
     };
-    // ------------------------------------------
+
+   
+   // ------------------------------------------
     // OFFER RECEIVED
     // ------------------------------------------
     const handleOffer = async ({
@@ -953,6 +969,127 @@ await peerConnectionRef.current.addIceCandidate(
     navigate("/dashboard");
   };
 
+        const handleGenerateSummary = async () => {
+    try {
+    if (!transcript.trim()) {
+    setSummary("No transcript available. Please record or transcribe the meeting first.");
+    return;
+    }
+    const meetingId = meeting?._id;
+    const token = getAccessToken();
+
+    if (!meetingId) {
+      setSummary("Meeting ID is missing. Please rejoin the meeting.");
+      return;
+    }
+
+    if (!token) {
+      setSummary("Please log in again to generate the meeting summary.");
+      return;
+    }
+
+    setIsGeneratingSummary(true);
+
+    const result = await generateMeetingSummary(
+      transcript,
+      meetingId,
+      token
+    );
+
+    console.log("Meeting Summary:", result);
+
+    setSummary(result.summary);
+
+    const items = Array.isArray(result.actionItems)
+      ? result.actionItems
+      : [];
+
+    setActionItems(
+      items.map((item) => ({
+        _id: "_id" in item ? String(item._id ?? "") : "",
+        task: String(item.task ?? ""),
+        assignee: String(item.assignee ?? ""),
+        dueDate: String(item.dueDate ?? ""),
+        status: item.status ?? ("Pending" as const),
+      }))
+    );
+
+    } catch (error) {
+    console.error("Failed to generate meeting summary:", error);
+    setSummary(
+    error instanceof Error
+    ? error.message
+    : "Failed to generate meeting summary."
+    );
+    } finally {
+    setIsGeneratingSummary(false);
+    }
+    };
+
+
+    const handleActionItemStatusChange = async (
+    index: number,
+    status: ActionItem["status"]
+    ) => {
+    const item = actionItems[index];
+    const meetingId = meeting?._id;
+    const token = getAccessToken();
+
+    if (!item?._id || !meetingId || !token) {
+    console.error("Missing action item ID, meeting ID, or access token.");
+    return;
+    }
+
+    const previousStatus = item.status;
+
+    // Update the UI immediately.
+    setActionItems((previous) =>
+    previous.map((current, currentIndex) =>
+    currentIndex === index ? { ...current, status } : current
+    )
+    );
+
+    try {
+    const response = await fetch(
+    `http://localhost:5000/api/meetings/${meetingId}/action-items/${item._id}/status`,
+    {
+    method: "PATCH",
+    headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+    }
+    );
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(data?.message || "Failed to save action item status.");
+    }
+
+    } catch (error) {
+    // Restore the old status if saving fails.
+    setActionItems((previous) =>
+    previous.map((current, currentIndex) =>
+    currentIndex === index
+    ? { ...current, status: previousStatus }
+    : current
+    )
+    );
+
+    
+    console.error("Failed to update action item status:", error);
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Failed to save action item status."
+    );
+
+    }
+    };
+
+
   // ==========================================
   // LOADING
   // ==========================================
@@ -963,6 +1100,8 @@ await peerConnectionRef.current.addIceCandidate(
       </div>
     );
   }
+
+  
 
   // ==========================================
   // UI
@@ -995,8 +1134,111 @@ await peerConnectionRef.current.addIceCandidate(
           </h3>
 
           <p>{transcript}</p>
-        </div>
+              <button
+            type="button"
+            onClick={handleGenerateSummary}
+            disabled={!transcript.trim() || isGeneratingSummary}
+            className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isGeneratingSummary
+              ? "Generating Summary..."
+              : "✨ Generate AI Summary"}
+          </button>
+
+        {/* {isGeneratingSummary && (
+          <p className="mt-3 text-gray-400">
+            Generating AI meeting summary...
+          </p>
+        )}
+
+        {summary && (
+          <div className="mt-4 rounded-lg bg-gray-800 p-4">
+            <h3 className="mb-2 text-lg font-semibold">
+              ✨ AI Meeting Summary
+            </h3>
+
+            <p className="whitespace-pre-wrap text-gray-300">
+              {summary}
+            </p>
+          </div>
+        )} */
+        }
+
+              {isGeneratingSummary && (
+              <p className="mt-3 text-gray-400">
+                Generating AI summary...
+              </p>
+            )}
+
+            {summary && (
+              <div className="mt-4 rounded-lg bg-gray-800 p-4">
+                <h3 className="mb-2 text-lg font-semibold">
+                  ✨ AI Meeting Summary
+                </h3>
+
+                <p className="whitespace-pre-wrap text-gray-300">
+                  {summary}
+                </p>
+              </div>
+            )}
+            
+      {actionItems.length > 0 && (
+        <section className="mt-4 rounded-lg bg-gray-800 p-4 text-white">
+          <h3 className="mb-4 text-lg font-semibold">
+            AI Action Items
+          </h3>
+
+          <div className="space-y-3">
+            {actionItems.map((item, index) => (
+              <div
+                key={`${item.task}-${index}`}
+                className="rounded-lg border border-gray-700 p-3"
+              >
+                <h4 className="font-medium">{item.task}</h4>
+
+                <p className="mt-1 text-sm text-gray-300">
+                  Assignee: {item.assignee || "Unassigned"}
+                </p>
+
+                <p className="text-sm text-gray-300">
+                  Due date: {item.dueDate || "Not specified"}
+                </p>
+
+                <label className="mt-3 block text-sm">
+                  Status
+                  <select
+                    value={item.status}
+                    // onChange={(event) => {
+                    //   const status = event.target.value as ActionItem["status"];
+
+                    //   setActionItems((previous) =>
+                    //     previous.map((current, currentIndex) =>
+                    //       currentIndex === index
+                    //         ? { ...current, status }
+                    //         : current
+                    //     )
+                    //   );
+                    // }}
+                   onChange={(event) =>
+                      void handleActionItemStatusChange(
+                        index,
+                        event.target.value as ActionItem["status"]
+                      )
+                    }
+                    className="mt-1 block rounded border border-gray-600 bg-gray-900 p-2 text-white"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </label>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
+            </div>
+          )}
       {/* ====================================== */}
       {/* HEADER */}
       {/* ====================================== */}

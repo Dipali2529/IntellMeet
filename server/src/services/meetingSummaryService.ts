@@ -1,3 +1,4 @@
+
 export interface MeetingSummaryResult {
   summary: string;
   keyPoints: string[];
@@ -5,6 +6,7 @@ export interface MeetingSummaryResult {
     task: string;
     assignee: string;
     dueDate: string;
+    status: "Pending" | "In Progress" | "Completed";
   }[];
 }
 
@@ -15,6 +17,10 @@ export async function generateMeetingSummary(
   transcript: string
 ): Promise<MeetingSummaryResult> {
   try {
+    if (!transcript.trim()) {
+      throw new Error("Meeting transcript is empty");
+    }
+
     if (MOCK_SUMMARY) {
       console.log(
         "[Meeting Summary] Mock mode enabled - skipping AI API"
@@ -34,22 +40,25 @@ export async function generateMeetingSummary(
             task: "Complete the assigned development tasks",
             assignee: "Team Member",
             dueDate: "Next Week",
+            status: "Pending",
           },
           {
             task: "Review the completed implementation",
             assignee: "Team Lead",
             dueDate: "Next Week",
+            status: "In Progress",
           },
           {
             task: "Test the implemented features",
             assignee: "Development Team",
             dueDate: "Next Week",
+            status: "Pending",
           },
         ],
       };
     }
 
-    // Real AI implementation will be added here later.
+    // Real AI implementation will be added later.
     throw new Error(
       "AI meeting summary is not configured"
     );
