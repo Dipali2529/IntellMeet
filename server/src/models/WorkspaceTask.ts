@@ -18,6 +18,7 @@ export interface IWorkspaceTask extends Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  assignee?: mongoose.Types.ObjectId | null;
 }
 
 const workspaceTaskSchema = new Schema<IWorkspaceTask>(
@@ -49,6 +50,11 @@ const workspaceTaskSchema = new Schema<IWorkspaceTask>(
       ref: "User",
       required: true,
       index: true,
+    },
+    assignee: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
   },
   {

@@ -1,3 +1,5 @@
+import { User } from "../models/User";
+import jwt from "jsonwebtoken";
 import { Server, Socket } from "socket.io";
 
 type WebRTCOffer = {
@@ -19,6 +21,32 @@ type WebRTCIceCandidate = {
 
 const setupSocket = (io: Server) => {
   io.on("connection", (socket: Socket) => {
+
+    
+    // Authenticate the socket using the existing JWT
+    const token = socket.handshake.auth?.token as string | undefined;
+
+    if (!token) {
+      socket.disconnect(true);
+      return;
+    }
+
+    try {
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "super_secret_access_jwt_key_2026"
+      ) as { userId: string; role: "Admin" | "Member" };
+
+      socket.data.userId = decoded.userId;
+      socket.data.role = decoded.role;
+
+      // Private room for this authenticated user
+      void socket.join(`user:${decoded.userId}`);
+      console.log("Notification room joined:", `user:${decoded.userId}`);
+    } catch {
+      socket.disconnect(true);
+      return;
+    }
     console.log("User connected:", socket.id);
 
     // ==========================================
@@ -121,11 +149,11 @@ const setupSocket = (io: Server) => {
     );
 
     // ==========================================
-    // CHAT MESSAGE
+    // CHAT MESSAGE + @MENTION NOTIFICATIONS
     // ==========================================
     socket.on(
       "chat-message",
-      ({
+      async ({
         meetingId,
         message,
       }: {
@@ -134,16 +162,47 @@ const setupSocket = (io: Server) => {
           text: string;
         };
       }) => {
-        console.log(
-          `Chat message from ${socket.id} in meeting ${meetingId}:`,
-          message.text
-        );
+        const text = message.text.trim();
 
-        // Send message to all OTHER participants
-        // in the same meeting room.
+        if (!text) return;
+
+        // Send the chat message to other meeting participants.
         socket.to(meetingId).emit("chat-message", {
-          text: message.text,
+          text,
         });
+
+        // Find email mentions such as @dipali@example.com.
+        const matches = text.match(
+          /@[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
+        ) ?? [];
+
+        const mentionedEmails = [
+          ...new Set(matches.map((mention) => mention.slice(1).toLowerCase())),
+        ];
+
+        for (const email of mentionedEmails) {
+          try {
+            const mentionedUser = await User.findOne({ email }).select("_id name");
+
+            if (!mentionedUser) continue;
+
+            const mentionedUserId = mentionedUser._id.toString();
+
+            // Do not notify the sender about their own mention.
+            if (mentionedUserId === socket.data.userId) continue;
+
+            // Send a real-time notification to the mentioned user.
+            io.to(`user:${mentionedUserId}`).emit("notification:new", {
+              type: "mention",
+              title: "You were mentioned in a meeting",
+              message: text,
+              createdAt: new Date().toISOString(),
+              read: false,
+            });
+          } catch (error) {
+            console.error("Failed to send mention notification:", error);
+          }
+        }
       }
     );
 
@@ -178,6 +237,32 @@ const setupSocket = (io: Server) => {
           }
         );
 
+
+        
+    // ==========================================
+    // TASK ASSIGNMENT NOTIFICATION
+    // ==========================================
+    socket.on(
+      "task-assigned",
+      (data: {
+        assigneeId: string;
+        taskId: string;
+        title: string;
+      }) => {
+        if (data.assigneeId !== socket.data.userId) {
+          return;
+        }
+
+        io.to(`user:${data.assigneeId}`).emit("notification:new", {
+          type: "task-assigned",
+          title: "New task assigned",
+          message: data.title,
+          taskId: data.taskId,
+          createdAt: new Date().toISOString(),
+          read: false,
+        });
+      }
+    );
     // ==========================================
     // DISCONNECT
     // ==========================================

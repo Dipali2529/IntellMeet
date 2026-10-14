@@ -1,7 +1,9 @@
 
 import { Response } from "express";
+import { User } from "../models/User";
 import { Meeting } from "../models/Meeting";
 import { AuthRequest } from "../middleware/auth";
+import { notifyUser } from "../services/notificationService";
 import { generateMeetingSummary } from "../services/meetingSummaryService";
 
 export async function generateSummary(
@@ -64,15 +66,58 @@ export async function generateSummary(
     meeting.actionItems = result.actionItems;
     await meeting.save();
 
+    // Notify users assigned to meeting action items.
+    for (const item of meeting.actionItems) {
+      const assigneeName = item.assignee?.trim();
+
+      if (
+        !assigneeName ||
+        assigneeName.toLowerCase() === "unassigned"
+      ) {
+        continue;
+      }
+
+      try {
+        const assignedUser = await User.findOne({
+          name: {
+            $regex: `^${assigneeName}$`,
+            $options: "i",
+          },
+        });
+
+        if (!assignedUser) {
+          continue;
+        }
+
+        notifyUser(assignedUser._id.toString(), {
+          type: "action-item-assigned",
+          title: "Meeting action item assigned",
+          message: item.task,
+          taskId: item._id?.toString() ?? "",
+          createdAt: new Date().toISOString(),
+          read: false,
+        });
+      } catch (notificationError) {
+        console.error(
+          "Failed to send action-item notification:",
+          notificationError
+        );
+      }
+    }
+
     res.status(200).json({
-      message: "Meeting summary generated and action items saved successfully",
+      message:
+        "Meeting summary generated and action items saved successfully",
       data: {
         ...result,
         actionItems: meeting.actionItems,
       },
     });
   } catch (error) {
-    console.error("Meeting summary controller error:", error);
+    console.error(
+      "Meeting summary controller error:",
+      error
+    );
 
     res.status(500).json({
       message: "Failed to generate meeting summary",

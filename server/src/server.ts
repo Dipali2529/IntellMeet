@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-
-dotenv.config();
+import "dotenv/config";
 
 import express from "express";
 import transcriptionRoutes from "./routes/transcriptionRoutes";
@@ -17,8 +15,8 @@ import meetingRoutes from "./routes/meetingRoutes";
 
 import { connectDB } from "./config/db";
 import workspaceRoutes from "./routes/workspaceRoutes";
-
-dotenv.config();
+import { setNotificationServer } from "./services/notificationService";
+//dotenv.config();
 
 const app = express();
 
@@ -60,6 +58,7 @@ const io = new Server(server, {
 
 // Initialize Socket.io events
 setupSocket(io);
+setNotificationServer(io);
 
 const PORT = 5000;
 

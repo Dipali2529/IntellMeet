@@ -113,19 +113,43 @@ function MeetingRoom() {
     
     const [actionItems, setActionItems] = useState<ActionItem[]>([]);
 
-    const handleTranscription = async (audioBlob: Blob) => {
-  try {
-    setIsTranscribing(true);
+   
+//const [transcript, setTranscript] = useState("");
+//const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState("");
 
-    const result = await transcribeAudio(audioBlob);
+  const handleTranscription = async (audioBlob: Blob) => {
+    try {
+      setIsTranscribing(true);
+      setTranscriptionError("");
+      setTranscript("");
 
-    setTranscript(result);
-  } catch (error) {
-    console.error("Transcription error:", error);
-  } finally {
-    setIsTranscribing(false);
-  }
-};
+      console.log("Recorded audio size:", audioBlob.size);
+
+      const result = await transcribeAudio(audioBlob);
+
+      console.log("Transcription result:", result);
+
+      if (!result || !result.trim()) {
+        setTranscriptionError(
+          "No transcript received. Please record your voice again."
+        );
+        return;
+      }
+
+      setTranscript(result);
+    } catch (error) {
+      console.error("Transcription error:", error);
+
+      setTranscriptionError(
+        error instanceof Error
+          ? error.message
+          : "Transcription failed. Please try again."
+      );
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
   // ==========================================
   // LOAD MEETING
   // ==========================================
@@ -1110,22 +1134,61 @@ await peerConnectionRef.current.addIceCandidate(
     
     <div className="flex h-screen flex-col bg-gray-950 text-white">
 
-      <button
-        onClick={() => {
-          const testAudio = new Blob(
-            ["IntellMeet test audio"],
-            { type: "audio/webm" }
-          );
+      
+  <button
+    type="button"
+    onClick={async () => {
+      try {
+        const stream =
+          await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
 
-          handleTranscription(testAudio);
-        }}
-        disabled={isTranscribing}
-        className="px-4 py-2 rounded bg-blue-600 text-white"
-      >
-        {isTranscribing
-          ? "Transcribing..."
-          : "Test Transcription"}
-      </button>
+        const recorder = new MediaRecorder(stream);
+        const chunks: BlobPart[] = [];
+
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunks.push(event.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          stream.getTracks().forEach((track) => track.stop());
+
+          const audioBlob = new Blob(chunks, {
+            type: recorder.mimeType || "audio/webm",
+          });
+
+          if (audioBlob.size === 0) {
+            console.error("No audio was recorded.");
+            return;
+          }
+
+          await handleTranscription(audioBlob);
+        };
+
+        recorder.start();
+
+
+        window.setTimeout(() => {
+          if (recorder.state === "recording") {
+            recorder.stop();
+          }
+        }, 5000);
+      } catch (error) {
+        console.error("Microphone recording failed:", error);
+        window.alert(
+          "Could not access the microphone. Check your browser permissions."
+        );
+      }
+    }}
+    disabled={isTranscribing}
+    className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+  >
+    {isTranscribing ? "Transcribing..." : "Test Transcription"}
+  </button>
+
 
             {transcript && (
         <div className="mt-4 p-4 rounded bg-gray-100 text-gray-900">

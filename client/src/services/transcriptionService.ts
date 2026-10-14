@@ -13,10 +13,18 @@ export async function transcribeAudio(
     }
   );
 
-  if (!response.ok) {
-    throw new Error("Failed to transcribe audio");
-  }
+ if (!response.ok) {
+  const errorText = await response.text();
 
+  console.error("Transcription API error:", {
+    status: response.status,
+    details: errorText,
+  });
+
+  throw new Error(
+    `Transcription failed (${response.status}): ${errorText}`
+  );
+}
   const data = await response.json();
 
   return data.transcript;

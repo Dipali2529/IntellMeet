@@ -17,7 +17,7 @@ export async function transcribeAudio(
           "[Transcription] Mock mode enabled - skipping OpenAI API"
         );
 
-        return "This is a development mock transcript for the IntellMeet meeting. The real AI transcription service will process the meeting audio when OpenAI API credits are available.";
+        return " Good morning, team. Today we are discussing the IntellMeet project. Dipali will finish the dashboard design by Friday. Rahul will complete API integration by Monday. The development team will fix bugs and complete the code review by next Wednesday. We will test all features before the final release.";
       }
 
 

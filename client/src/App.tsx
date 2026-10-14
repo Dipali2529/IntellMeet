@@ -1,3 +1,8 @@
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { getAccessToken } from "./services/auth";
+import { socket } from "./services/socket";
+
 import {
   BrowserRouter,
   Routes,
@@ -16,10 +21,137 @@ import JoinMeeting from "./pages/meeting/JoinMeeting";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Workspace from "./pages/dashboard/Workspace";
 
+
+
+type AppNotification = {
+  type: string;
+  title: string;
+  message: string;
+  taskId?: string;
+  createdAt: string;
+  read: boolean;
+};
+
+function NotificationCenter() {
+  const location = useLocation();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const token = getAccessToken();
+
+    if (!token) {
+      return;
+    }
+
+    socket.auth = { token };
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message);
+    });
+
+    if (!socket.connected) {
+      socket.connect();
+}
+   
+    const handleNotification = (notification: AppNotification) => {
+  setNotifications((current) => [notification, ...current]);
+};
+
+    socket.on("notification:new", handleNotification);
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    return () => {
+      socket.off("notification:new", handleNotification);
+    };
+  }, [location.pathname]);
+
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read
+  ).length;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 16,
+        right: 20,
+        zIndex: 1000,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        style={{ padding: "10px 14px", cursor: "pointer" }}
+      >
+        🔔 Notifications ({unreadCount})
+      </button>
+
+      {isOpen && (
+        <div
+          style={{
+            background: "white",
+            color: "#222",
+            border: "1px solid #ddd",
+            borderRadius: 8,
+            padding: 12,
+            marginTop: 8,
+            width: 300,
+            maxHeight: 350,
+            overflowY: "auto",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          }}
+        >
+          <h3>Notifications</h3>
+
+          {notifications.length === 0 ? (
+            <p>No notifications yet.</p>
+          ) : (
+            notifications.map((notification, index) => (
+              <div
+                key={`${notification.taskId ?? notification.type}-${notification.createdAt}-${index}`}
+                style={{
+                  padding: "10px 0",
+                  borderBottom: "1px solid #eee",
+                }}
+              >
+                <strong>{notification.title}</strong>
+                <p>{notification.message}</p>
+                <small>
+                  {new Date(notification.createdAt).toLocaleString()}
+                </small>
+              </div>
+            ))
+          )}
+
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                setNotifications((current) =>
+                  current.map((item) => ({ ...item, read: true }))
+                )
+              }
+            >
+              Mark all as read
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 function App() {
   return (
-   <BrowserRouter>
-      <Routes>
+<BrowserRouter>
+  <NotificationCenter />
+  <Routes>
 
         {/* Authentication */}
         <Route path="/login" element={<Login />} />
