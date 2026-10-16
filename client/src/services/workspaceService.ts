@@ -1,6 +1,7 @@
+import { API_URL as BASE_API_URL } from "../config/api";
 import { getAccessToken } from "./auth";
 
-const API_URL = "http://localhost:5000/api/workspace/tasks";
+const API_URL = `${BASE_API_URL}/api/workspace/tasks`;
 
 export type TaskStatus = "To Do" | "In Progress" | "Done";
 export type TaskPriority = "Low" | "Medium" | "High";
@@ -101,7 +102,7 @@ export async function getWorkspaceTasks(): Promise<WorkspaceTask[]> {
     
     export async function getWorkspaceUsers(): Promise<WorkspaceAssignee[]> {
       const data = await request<{ users: WorkspaceAssignee[] }>(
-        "http://localhost:5000/api/workspace/users"
+        `${BASE_API_URL}/api/workspace/users`
       );
 
       return data.users;

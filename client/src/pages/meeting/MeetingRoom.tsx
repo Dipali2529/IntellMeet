@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { socket } from "../../services/socket";
 import { rtcConfiguration } from "../../services/webrtc";
 import { transcribeAudio } from "../../services/transcriptionService";
+import { API_URL as BASE_API_URL } from "../../config/api";
 
 interface Meeting {
   _id: string;
@@ -1075,7 +1076,7 @@ await peerConnectionRef.current.addIceCandidate(
 
     try {
     const response = await fetch(
-    `http://localhost:5000/api/meetings/${meetingId}/action-items/${item._id}/status`,
+   `${BASE_API_URL}/api/meetings/${meetingId}/action-items/${item._id}/status`,
     {
     method: "PATCH",
     headers: {

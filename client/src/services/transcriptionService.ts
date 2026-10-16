@@ -1,4 +1,4 @@
-
+import { API_URL as BASE_API_URL } from "../config/api";
 export async function transcribeAudio(
   audioBlob: Blob
 ): Promise<string> {
@@ -6,7 +6,7 @@ export async function transcribeAudio(
   formData.append("audio", audioBlob, "meeting-audio.webm");
 
   const response = await fetch(
-    "http://localhost:5000/api/transcription/transcribe",
+    `${BASE_API_URL}/api/transcription/transcribe`,
     {
       method: "POST",
       body: formData,

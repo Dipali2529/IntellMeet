@@ -1,6 +1,8 @@
 import { getAccessToken } from "./auth";
 
-const API_URL = "http://localhost:5000/api/meetings";
+import { API_URL as BASE_API_URL } from "../config/api";
+
+const API_URL = `${BASE_API_URL}/api/meetings`;
 
 export interface CreateMeetingData {
   title: string;

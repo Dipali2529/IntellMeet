@@ -1,4 +1,4 @@
-
+import { API_URL as BASE_API_URL } from "../config/api";
 export interface MeetingSummaryResult {
   summary: string;
   keyPoints: string[];
@@ -16,7 +16,7 @@ export async function generateMeetingSummary(
   token: string
 ): Promise<MeetingSummaryResult> {
   const response = await fetch(
-    "http://localhost:5000/api/meeting-summary/summary",
+    `${BASE_API_URL}/api/meeting-summary/summary`,
     {
       method: "POST",
       headers: {
