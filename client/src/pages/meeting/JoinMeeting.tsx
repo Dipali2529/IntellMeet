@@ -16,7 +16,7 @@ function JoinMeeting() {
         setMeetingCode(code.trim().toUpperCase());
       }
     }, []);
-  const [directJoin, setDirectJoin] = useState(false);
+ 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

@@ -116,7 +116,7 @@ function MeetingRoom() {
    
 //const [transcript, setTranscript] = useState("");
 //const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcriptionError, setTranscriptionError] = useState("");
+ const [, setTranscriptionError] = useState("");
 
   const handleTranscription = async (audioBlob: Blob) => {
     try {
@@ -1190,105 +1190,94 @@ await peerConnectionRef.current.addIceCandidate(
   </button>
 
 
-            {transcript && (
-        <div className="mt-4 p-4 rounded bg-gray-100 text-gray-900">
-          <h3 className="font-semibold mb-2">
-            Meeting Transcript
+         
+    {transcript && (
+      <div className="mt-4 rounded-xl border border-gray-200 bg-gray-100 p-4 text-gray-900">
+        <h3 className="mb-2 font-semibold">
+          Meeting Transcript
+        </h3>
+
+        <p className="whitespace-pre-wrap">{transcript}</p>
+      </div>
+    )}
+
+    {/* Generate AI Summary */}
+    <div className="mt-4 rounded-xl border border-gray-700 bg-gray-900 p-5 text-white">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold">
+            ✨ AI Meeting Summary
           </h3>
-
-          <p>{transcript}</p>
-              <button
-            type="button"
-            onClick={handleGenerateSummary}
-            disabled={!transcript.trim() || isGeneratingSummary}
-            className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isGeneratingSummary
-              ? "Generating Summary..."
-              : "✨ Generate AI Summary"}
-          </button>
-
-        {/* {isGeneratingSummary && (
-          <p className="mt-3 text-gray-400">
-            Generating AI meeting summary...
+          <p className="mt-1 text-sm text-gray-400">
+            Generate a summary and action items from your meeting transcript.
           </p>
-        )}
+        </div>
 
-        {summary && (
-          <div className="mt-4 rounded-lg bg-gray-800 p-4">
-            <h3 className="mb-2 text-lg font-semibold">
-              ✨ AI Meeting Summary
-            </h3>
+        <button
+          type="button"
+          onClick={handleGenerateSummary}
+          disabled={!transcript.trim() || isGeneratingSummary}
+          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isGeneratingSummary
+            ? "Generating Summary..."
+            : "✨ Generate AI Summary"}
+        </button>
+      </div>
 
-            <p className="whitespace-pre-wrap text-gray-300">
-              {summary}
-            </p>
-          </div>
-        )} */
-        }
+      {isGeneratingSummary && (
+        <p className="mt-4 animate-pulse text-sm text-blue-300">
+          Generating your meeting summary and action items...
+        </p>
+      )}
 
-              {isGeneratingSummary && (
-              <p className="mt-3 text-gray-400">
-                Generating AI summary...
-              </p>
-            )}
+      {summary && (
+        <div className="mt-5 rounded-lg border border-gray-700 bg-gray-800 p-4">
+          <h4 className="mb-2 font-semibold text-blue-300">
+            Summary
+          </h4>
 
-            {summary && (
-              <div className="mt-4 rounded-lg bg-gray-800 p-4">
-                <h3 className="mb-2 text-lg font-semibold">
-                  ✨ AI Meeting Summary
-                </h3>
+          <p className="whitespace-pre-wrap leading-7 text-gray-200">
+            {summary}
+          </p>
+        </div>
+      )}
 
-                <p className="whitespace-pre-wrap text-gray-300">
-                  {summary}
-                </p>
-              </div>
-            )}
-            
       {actionItems.length > 0 && (
-        <section className="mt-4 rounded-lg bg-gray-800 p-4 text-white">
-          <h3 className="mb-4 text-lg font-semibold">
-            AI Action Items
-          </h3>
+        <section className="mt-5">
+          <h4 className="mb-3 text-lg font-semibold">
+            ✅ Action Items ({actionItems.length})
+          </h4>
 
           <div className="space-y-3">
             {actionItems.map((item, index) => (
               <div
-                key={`${item.task}-${index}`}
-                className="rounded-lg border border-gray-700 p-3"
+                key={item._id || `${item.task}-${index}`}
+                className="rounded-lg border border-gray-700 bg-gray-800 p-4"
               >
-                <h4 className="font-medium">{item.task}</h4>
+                <h5 className="font-medium text-white">
+                  {item.task}
+                </h5>
 
-                <p className="mt-1 text-sm text-gray-300">
+                <p className="mt-2 text-sm text-gray-300">
                   Assignee: {item.assignee || "Unassigned"}
                 </p>
 
-                <p className="text-sm text-gray-300">
+                <p className="mt-1 text-sm text-gray-300">
                   Due date: {item.dueDate || "Not specified"}
                 </p>
 
-                <label className="mt-3 block text-sm">
+                <label className="mt-3 block text-sm text-gray-300">
                   Status
                   <select
                     value={item.status}
-                    // onChange={(event) => {
-                    //   const status = event.target.value as ActionItem["status"];
-
-                    //   setActionItems((previous) =>
-                    //     previous.map((current, currentIndex) =>
-                    //       currentIndex === index
-                    //         ? { ...current, status }
-                    //         : current
-                    //     )
-                    //   );
-                    // }}
-                   onChange={(event) =>
+                    onChange={(event) =>
                       void handleActionItemStatusChange(
                         index,
                         event.target.value as ActionItem["status"]
                       )
                     }
-                    className="mt-1 block rounded border border-gray-600 bg-gray-900 p-2 text-white"
+                    className="mt-1 block rounded-lg border border-gray-600 bg-gray-900 p-2 text-white"
                   >
                     <option value="Pending">Pending</option>
                     <option value="In Progress">In Progress</option>
@@ -1300,8 +1289,14 @@ await peerConnectionRef.current.addIceCandidate(
           </div>
         </section>
       )}
-            </div>
-          )}
+
+      {!summary && !isGeneratingSummary && (
+        <p className="mt-4 text-sm text-gray-400">
+          Your AI-generated summary will appear here after generation.
+        </p>
+      )}
+    </div>
+
       {/* ====================================== */}
       {/* HEADER */}
       {/* ====================================== */}

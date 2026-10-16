@@ -62,6 +62,10 @@ export async function generateSummary(
     const result = await generateMeetingSummary(
       transcript.trim()
     );
+    // Save meeting summary and transcript for dashboard history
+    meeting.summary = result.summary;
+    meeting.transcript = transcript.trim();
+    //meeting.keyPoints = result.keyPoints ?? [];
 
     meeting.actionItems = result.actionItems;
     await meeting.save();

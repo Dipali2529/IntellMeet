@@ -24,6 +24,7 @@ export function notifyUser(
   }
 
   console.log("Sending notification to:", `user:${userId}`);
+
   notificationServer
     .to(`user:${userId}`)
     .emit("notification:new", notification);

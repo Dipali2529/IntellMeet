@@ -10,90 +10,62 @@ export interface MeetingSummaryResult {
   }[];
 }
 
-const MOCK_SUMMARY =
-  process.env.AI_TRANSCRIPTION_MOCK === "true";
-
 export async function generateMeetingSummary(
   transcript: string
 ): Promise<MeetingSummaryResult> {
-  if (!transcript.trim()) {
+  const cleanTranscript = transcript
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleanTranscript) {
     throw new Error("Meeting transcript is empty");
   }
 
-  if (MOCK_SUMMARY) {
-    console.log(
-      "[Meeting Summary] Generating sample-based summary"
+  // Split the actual transcript into sentences.
+  const sentences = cleanTranscript
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+  // Use only sentences that exist in the transcript.
+  const keyPoints = sentences.slice(0, 6);
+
+  const summary =
+    sentences.length <= 3
+      ? sentences.join(" ")
+      : sentences.slice(0, 4).join(" ");
+
+  const actionItems: MeetingSummaryResult["actionItems"] = [];
+
+  const taskPattern =
+    /\b(will|must|need to|needs to|should|agreed to|responsible for|action item)\b/i;
+
+  for (const sentence of sentences) {
+    if (!taskPattern.test(sentence)) {
+      continue;
+    }
+
+    // Do not guess the assignee or deadline.
+    // These fields remain unspecified unless explicitly extracted.
+    const dueDateMatch = sentence.match(
+      /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|next monday|next tuesday|next wednesday|next thursday|next friday)\b/i
     );
 
-    const text = transcript.toLowerCase();
+    const nameMatch = sentence.match(
+      /\b([A-Z][a-z]+)\s+(?:will|must|needs to|should)\b/
+    );
 
-    const actionItems: MeetingSummaryResult["actionItems"] = [];
-
-    if (text.includes("dipali")) {
-      actionItems.push({
-        task: "Finish dashboard design",
-        assignee: "Dipali",
-        dueDate: "Friday",
-        status: "Pending",
-      });
-    }
-
-    if (text.includes("rahul")) {
-      actionItems.push({
-        task: "Complete API integration",
-        assignee: "Rahul",
-        dueDate: "Monday",
-        status: "Pending",
-      });
-    }
-
-    if (
-      text.includes("development team") ||
-      text.includes("fix bugs") ||
-      text.includes("code review")
-    ) {
-      actionItems.push({
-        task: "Fix reported bugs and complete code review",
-        assignee: "Development Team",
-        dueDate: "Next Wednesday",
-        status: "Pending",
-      });
-    }
-
-    if (text.includes("test all features")) {
-      actionItems.push({
-        task: "Test all features before final release",
-        assignee: "Development Team",
-        dueDate: "Before final release",
-        status: "Pending",
-      });
-    }
-
-    if (actionItems.length === 0) {
-      actionItems.push({
-        task: "Review meeting transcript and identify tasks",
-        assignee: "Development Team",
-        dueDate: "Not specified",
-        status: "Pending",
-      });
-    }
-
-    return {
-      summary:
-        "The team discussed IntellMeet project progress, dashboard design, API integration, bug fixing, code review, and feature testing.",
-
-      keyPoints: [
-        "Discussed current IntellMeet project progress.",
-        "Reviewed dashboard design and API integration tasks.",
-        "Discussed bug fixing and code review.",
-        "Planned feature testing before the final release.",
-      ],
-
-      actionItems,
-    };
+    actionItems.push({
+      task: sentence,
+      assignee: nameMatch?.[1] ?? "Unassigned",
+      dueDate: dueDateMatch?.[1] ?? "Not specified",
+      status: "Pending",
+    });
   }
 
-  throw new Error(
-    "AI meeting summary is not configured. Enable mock mode or configure an AI provider."
-  );
+  return {
+    summary,
+    keyPoints,
+    actionItems,
+  };
 }

@@ -1,3 +1,4 @@
+
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IMeeting extends Document {
@@ -8,17 +9,34 @@ export interface IMeeting extends Document {
   scheduledDate?: string;
   scheduledTime?: string;
   duration?: number;
+
   allowChat: boolean;
   allowScreenShare: boolean;
   allowRecording: boolean;
 
- actionItems: {
-  _id?: mongoose.Types.ObjectId;
-  task: string;
-  assignee: string;
-  dueDate: string;
-  status: "Pending" | "In Progress" | "Completed";
-}[];
+  // AI meeting history
+  summary: string;
+  transcript: string;
+  keyPoints: string[];
+
+  // Persisted meeting chat
+  chatMessages: {
+    senderName: string;
+    message: string;
+    createdAt: Date;
+  }[];
+
+  // Recording metadata (not the actual audio/video file)
+  recordingUrl?: string;
+  recordingAvailable: boolean;
+
+  actionItems: {
+    _id?: mongoose.Types.ObjectId;
+    task: string;
+    assignee: string;
+    dueDate: string;
+    status: "Pending" | "In Progress" | "Completed";
+  }[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -52,19 +70,75 @@ const meetingSchema = new Schema<IMeeting>(
       index: true,
     },
 
-    scheduledDate: {
-      type: String,
-    },
-
-    scheduledTime: {
-      type: String,
-    },
+    scheduledDate: String,
+    scheduledTime: String,
 
     duration: {
       type: Number,
       default: 60,
     },
-        actionItems: {
+
+    allowChat: {
+      type: Boolean,
+      default: true,
+    },
+
+    allowScreenShare: {
+      type: Boolean,
+      default: true,
+    },
+
+    allowRecording: {
+      type: Boolean,
+      default: false,
+    },
+
+    summary: {
+      type: String,
+      default: "",
+    },
+
+    transcript: {
+      type: String,
+      default: "",
+    },
+
+    keyPoints: {
+      type: [String],
+      default: [],
+    },
+
+    chatMessages: {
+      type: [
+        {
+          senderName: {
+            type: String,
+            default: "Participant",
+          },
+          message: {
+            type: String,
+            required: true,
+          },
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
+
+    recordingUrl: {
+      type: String,
+      default: "",
+    },
+
+    recordingAvailable: {
+      type: Boolean,
+      default: false,
+    },
+
+    actionItems: {
       type: [
         {
           task: {
@@ -87,21 +161,6 @@ const meetingSchema = new Schema<IMeeting>(
         },
       ],
       default: [],
-    },
-
-    allowChat: {
-      type: Boolean,
-      default: true,
-    },
-
-    allowScreenShare: {
-      type: Boolean,
-      default: true,
-    },
-
-    allowRecording: {
-      type: Boolean,
-      default: false,
     },
   },
   {

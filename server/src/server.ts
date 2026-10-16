@@ -8,7 +8,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 //import dotenv from "dotenv";
 import { Server } from "socket.io";
-
+import teamRoutes from "./routes/teamRoutes";
 import setupSocket from "./services/socket";
 import authRoutes from "./routes/authRoutes";
 import meetingRoutes from "./routes/meetingRoutes";
@@ -34,6 +34,7 @@ app.use(
   meetingSummaryRoutes
 );
 app.use("/api/workspace", workspaceRoutes);
+app.use("/api/teams", teamRoutes);
 app.use(cookieParser());
 
 // Authentication routes
