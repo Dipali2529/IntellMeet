@@ -22,7 +22,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+   origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   })
 );
@@ -51,7 +51,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -61,14 +61,19 @@ const io = new Server(server, {
 setupSocket(io);
 setNotificationServer(io);
 
-const PORT = 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
 
-  server.listen(PORT, () => {
-    console.log(`IntellMeet server running on port ${PORT}`);
-  });
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`IntellMeet server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start IntellMeet server:", error);
+    process.exit(1);
+  }
 };
 
 startServer();
