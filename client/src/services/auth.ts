@@ -1,6 +1,6 @@
 import { API_URL as BASE_API_URL } from "../config/api";
 
-const API_URL = `${BASE_API_URL}/api/auth`;
+const API_URL = `${BASE_API_URL}/auth`;
 
 export interface User {
   id: string;
