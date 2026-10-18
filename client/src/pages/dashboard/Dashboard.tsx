@@ -30,7 +30,9 @@ function Dashboard() {
   const [meetingFilter, setMeetingFilter] =
     useState<MeetingFilter>("All");
   const [copiedCode, setCopiedCode] = useState("");
-  //const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const meetingsPerPage = 5;
+  
 
   const loadMeetings = async (isRefresh = false) => {
     if (isRefresh) {
@@ -94,7 +96,7 @@ function Dashboard() {
 
   const upcomingCount = meetings.filter(isUpcoming).length;
 
-  const filteredMeetings = meetings.filter((meeting) => {
+  const matchingMeetings = meetings.filter((meeting) => {
     const search = searchTerm.trim().toLowerCase();
 
     const matchesSearch =
@@ -108,6 +110,24 @@ function Dashboard() {
 
     return matchesSearch && matchesFilter;
   });
+
+  
+
+const sortedMeetings = [...matchingMeetings].sort((a, b) => {
+  const dateA = getMeetingDate(a)?.getTime() ?? 0;
+  const dateB = getMeetingDate(b)?.getTime() ?? 0;
+  return dateB - dateA;
+});
+
+const totalPages = Math.ceil(
+  sortedMeetings.length / meetingsPerPage
+);
+
+const filteredMeetings = sortedMeetings.slice(
+  (currentPage - 1) * meetingsPerPage,
+  currentPage * meetingsPerPage
+);
+
 
   const formatMeetingDate = (meeting: Meeting) => {
     const date = getMeetingDate(meeting);
@@ -396,7 +416,7 @@ function Dashboard() {
               <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
                 <div>
                   <h3 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                    Previous Meetings
+                    Recent Meetings
                   </h3>
                   <p className="mt-2 text-sm text-slate-500">
                     View and manage meetings created by your account.
@@ -591,14 +611,58 @@ function Dashboard() {
                   </div>
                 )}
 
-              {!loading &&
-                !error &&
-                filteredMeetings.length > 0 && (
-                  <div className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-500">
-                    Showing {filteredMeetings.length} of{" "}
-                    {meetings.length} meetings
-                  </div>
-                )}
+              
+        {!loading && !error && matchingMeetings.length > 0 && (
+          <div className="mt-5 flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-500">
+              Showing {(currentPage - 1) * meetingsPerPage + 1}–
+              {Math.min(currentPage * meetingsPerPage, matchingMeetings.length)} of{" "}
+              {matchingMeetings.length} meetings
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) => Math.max(1, page - 1))
+                }
+                disabled={currentPage === 1}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:opacity-40"
+              >
+                Previous
+              </button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                      currentPage === page
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
             </section>
 
             <footer className="pb-2 text-center text-xs text-slate-400">

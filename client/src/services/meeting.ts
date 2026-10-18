@@ -2,7 +2,7 @@ import { getAccessToken } from "./auth";
 
 import { API_URL as BASE_API_URL } from "../config/api";
 
-const API_URL = `${BASE_API_URL}/api/meetings`;
+const API_URL = `${BASE_API_URL}/meetings`;
 
 export interface CreateMeetingData {
   title: string;
