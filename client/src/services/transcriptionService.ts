@@ -6,7 +6,7 @@ export async function transcribeAudio(
   formData.append("audio", audioBlob, "meeting-audio.webm");
 
   const response = await fetch(
-    `${BASE_API_URL}/api/transcription/transcribe`,
+   `${BASE_API_URL}/transcription/transcribe`,
     {
       method: "POST",
       body: formData,
