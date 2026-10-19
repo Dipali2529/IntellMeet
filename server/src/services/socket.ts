@@ -23,30 +23,33 @@ const setupSocket = (io: Server) => {
   io.on("connection", (socket: Socket) => {
 
     
-    // Authenticate the socket using the existing JWT
+   
+    // Authenticate when a token is provided, but allow guest sockets.
     const token = socket.handshake.auth?.token as string | undefined;
 
-    if (!token) {
-      socket.disconnect(true);
-      return;
+    if (token) {
+      try {
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || "super_secret_access_jwt_key_2026"
+        ) as { userId: string; role: "Admin" | "Member" };
+
+        socket.data.userId = decoded.userId;
+        socket.data.role = decoded.role;
+
+        void socket.join(`user:${decoded.userId}`);
+        console.log("Notification room joined:", `user:${decoded.userId}`);
+      } catch {
+        // Reject an invalid token rather than silently treating it as a guest.
+        socket.disconnect(true);
+        return;
+      }
+    } else {
+      socket.data.userId = null;
+      socket.data.role = "Guest";
+      console.log("Guest socket connected:", socket.id);
     }
 
-    try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || "super_secret_access_jwt_key_2026"
-      ) as { userId: string; role: "Admin" | "Member" };
-
-      socket.data.userId = decoded.userId;
-      socket.data.role = decoded.role;
-
-      // Private room for this authenticated user
-      void socket.join(`user:${decoded.userId}`);
-      console.log("Notification room joined:", `user:${decoded.userId}`);
-    } catch {
-      socket.disconnect(true);
-      return;
-    }
     console.log("User connected:", socket.id);
 
     // ==========================================
