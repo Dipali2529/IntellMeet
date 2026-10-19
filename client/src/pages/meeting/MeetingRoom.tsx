@@ -361,6 +361,8 @@ const location = useLocation();
         "join-meeting",
         meetingId
       );
+      console.log("Joining meeting with ID:", meetingId);
+      console.log("Socket ID:", socket.id);
 
       console.log(
         "Joined meeting:",
