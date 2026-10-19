@@ -2,8 +2,8 @@ import { getAccessToken } from "../../services/auth";
 import { generateMeetingSummary } from "../../services/meetingSummaryService";
 
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
+//import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { socket } from "../../services/socket";
 import { rtcConfiguration } from "../../services/webrtc";
 import { transcribeAudio } from "../../services/transcriptionService";
@@ -106,7 +106,7 @@ function MeetingRoom() {
 
   const [chatMessage, setChatMessage] =
     useState("");
-
+const location = useLocation();
     const [transcript, setTranscript] = useState("");
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [summary, setSummary] = useState("");
@@ -159,7 +159,10 @@ function MeetingRoom() {
       localStorage.getItem("currentMeeting");
 
     if (!savedMeeting) {
-      navigate("/dashboard");
+     // navigate("/dashboard");
+      const isDemoMode = location.state?.demoMode === true;
+
+      navigate(isDemoMode ? "/demo" : "/dashboard");
       return;
     }
 

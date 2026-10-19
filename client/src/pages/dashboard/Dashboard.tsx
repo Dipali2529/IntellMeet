@@ -8,8 +8,14 @@ import {
   ChevronDown,
   LogOut,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { getCurrentUser, logout } from "../../services/auth";
+//import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  getCurrentUser,
+  getAccessToken,
+  logout,
+} from "../../services/auth";
+import { API_URL as BASE_API_URL } from "../../config/api";
 import {
   getMyMeetings,
   type Meeting,
@@ -19,10 +25,18 @@ import ThemeSwitcher from "../../components/common/ThemeSwitcher";
 type MeetingFilter = "All" | "Upcoming" | "Past";
 
 function Dashboard() {
-  const navigate = useNavigate();
-  const user = getCurrentUser();
+ const navigate = useNavigate();
+const location = useLocation();
+
+const isDemoMode = location.pathname === "/demo";
+
+const user = isDemoMode
+  ? { name: "Demo User", email: "demo@intellmeet.com" }
+  : getCurrentUser();
 
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [teamMemberCount, setTeamMemberCount] = useState<number | null>(null);
+  const [teamCountLoading, setTeamCountLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -57,9 +71,73 @@ function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    void loadMeetings();
-  }, []);
+   useEffect(() => {
+  if (isDemoMode) {
+    setTeamMemberCount(3);
+    setTeamCountLoading(false);
+    return;
+  }
+
+  async function loadTeamMembers() {
+    const token = getAccessToken();
+
+    if (!token) {
+      setTeamCountLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE_API_URL}/teams`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load teams");
+      }
+
+      const data = await response.json();
+      const teams = Array.isArray(data.teams) ? data.teams : [];
+      const uniqueMemberIds = new Set<string>();
+
+      for (const team of teams) {
+        if (Array.isArray(team.members)) {
+          for (const member of team.members) {
+            const memberId =
+              typeof member === "string" ? member : member?._id;
+
+            if (memberId) uniqueMemberIds.add(String(memberId));
+          }
+        }
+      }
+
+      setTeamMemberCount(uniqueMemberIds.size);
+    } catch (error) {
+      console.error("Failed to load team members:", error);
+      setTeamMemberCount(null);
+    } finally {
+      setTeamCountLoading(false);
+    }
+  }
+
+  void loadTeamMembers();
+}, [isDemoMode]);
+
+    // useEffect(() => {
+    //   void loadMeetings();
+    // }, []);
+
+    useEffect(() => {
+  if (isDemoMode) {
+    setMeetings([]);
+    setLoading(false);
+    setError("");
+    return;
+  }
+
+  void loadMeetings();
+}, [isDemoMode]);
 
   const handleLogout = () => {
     logout();
@@ -331,17 +409,17 @@ const filteredMeetings = sortedMeetings.slice(
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-row flex-nowrap items-center gap-3">
                 <button
                   onClick={handleCreateMeeting}
-                  className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+                 className="whitespace-nowrap rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
                 >
                   + Create Meeting
                 </button>
 
                 <button
                   onClick={handleJoinMeeting}
-                  className="rounded-xl border border-blue-200 bg-white px-5 py-3 font-semibold text-blue-700 transition hover:bg-blue-50"
+                 className="whitespace-nowrap rounded-xl border border-blue-200 bg-white px-5 py-3 font-semibold text-blue-700 transition hover:bg-blue-50"
                 >
                   Join Meeting
                 </button>
@@ -395,11 +473,24 @@ const filteredMeetings = sortedMeetings.slice(
                       Team Members
                     </p>
                     <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                      —
+                      {teamCountLoading
+                        ? "..."
+                        : teamMemberCount === null
+                          ? "—"
+                          : teamMemberCount}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">
-                      Team member statistics are not connected yet.
-                    </p>
+                        {teamMemberCount === null
+                          ? "Unable to load team member statistics."
+                          : "Unique members across your teams."}
+                      </p>
+                    <button
+                      onClick={() => navigate("/teams")}
+                      className="mt-4 rounded-lg border border-violet-200 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+                    >
+                      <Users size={16} className="mr-2 inline" />
+                      Add Member
+                    </button>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-xl text-violet-600">
                     ♧

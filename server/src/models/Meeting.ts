@@ -13,7 +13,7 @@ export interface IMeeting extends Document {
   allowChat: boolean;
   allowScreenShare: boolean;
   allowRecording: boolean;
-
+  isPublicDemo: boolean;
   // AI meeting history
   summary: string;
   transcript: string;
@@ -92,7 +92,11 @@ const meetingSchema = new Schema<IMeeting>(
       type: Boolean,
       default: false,
     },
-
+    isPublicDemo: {
+          type: Boolean,
+          default: false,
+          index: true,
+        },
     summary: {
       type: String,
       default: "",

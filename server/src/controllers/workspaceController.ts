@@ -21,11 +21,14 @@ export const getWorkspaceTasks = async (
       return;
     }
 
-    const tasks = await WorkspaceTask.find({
-    createdBy: req.user.userId,
-  })
-    .populate("assignee", "name email role")
-    .sort({ createdAt: -1 });
+      const tasks = await WorkspaceTask.find({
+      $or: [
+        { createdBy: req.user.userId },
+        { assignee: req.user.userId },
+      ],
+    })
+      .populate("assignee", "name email role")
+      .sort({ createdAt: -1 });
 
 
     res.status(200).json({ tasks });

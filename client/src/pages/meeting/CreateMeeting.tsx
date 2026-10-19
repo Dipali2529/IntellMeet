@@ -1,11 +1,17 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createMeeting } from "../../services/meeting";
+import {
+  createMeeting,
+  createPublicDemoMeeting,
+} from "../../services/meeting";
+import { useLocation } from "react-router-dom";
 
 export default function CreateMeeting() {
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const isDemoMode = location.state?.demoMode === true;
+  //const isDemoMode = location.pathname === "/demo/meeting/create";
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
@@ -37,18 +43,27 @@ export default function CreateMeeting() {
       allowRecording,
     };
 
-    const response = await createMeeting(meetingData);
+    const response = isDemoMode
+  ? await createPublicDemoMeeting(meetingData)
+  : await createMeeting(meetingData);
 
     console.log("Meeting created:", response.meeting);
 
-    // Store meeting information temporarily
     localStorage.setItem(
-      "currentMeeting",
-      JSON.stringify(response.meeting)
-    );
+  "currentMeeting",
+  JSON.stringify(response.meeting)
+);
 
-    // Go to meeting lobby
-    navigate("/meeting/lobby");
+if (isDemoMode) {
+  navigate("/meeting/lobby", {
+    state: {
+      demoMode: true,
+      meetingCode: response.meeting.meetingCode,
+    },
+  });
+} else {
+  navigate("/meeting/lobby");
+}
   } catch (error) {
     console.error("Create meeting error:", error);
 

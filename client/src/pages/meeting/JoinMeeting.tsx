@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getMeetingByCode } from "../../services/meeting";
-
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  getMeetingByCode,
+  getPublicDemoMeetingByCode,
+} from "../../services/meeting";
 function JoinMeeting() {
   const navigate = useNavigate();
-
+const location = useLocation();
+const isDemoMode = location.state?.demoMode === true;
   const [meetingCode, setMeetingCode] = useState("");
 
       
@@ -36,7 +39,9 @@ function JoinMeeting() {
     try {
       setLoading(true);
 
-      const meeting = await getMeetingByCode(code);
+      const meeting = isDemoMode
+  ? await getPublicDemoMeetingByCode(code)
+  : await getMeetingByCode(code);
 
       localStorage.setItem(
         "currentMeeting",
@@ -102,7 +107,9 @@ function JoinMeeting() {
 
           <button
             type="button"
-            onClick={() => navigate("/dashboard")}
+           onClick={() =>
+              navigate(isDemoMode ? "/demo" : "/dashboard")
+            }
             className="w-full rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50"
           >
             Back to Dashboard

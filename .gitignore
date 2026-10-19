@@ -10,3 +10,5 @@ coverage/
 # Uploaded meeting audio files
 uploads/
 server/uploads/
+.vercel
+.env*

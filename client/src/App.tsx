@@ -14,7 +14,7 @@ import MeetingRoom from "./pages/meeting/MeetingRoom";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import JoinMeeting from "./pages/meeting/JoinMeeting";
-
+import PublicDemo from "./pages/dashboard/PublicDemo";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Workspace from "./pages/dashboard/Workspace";
 import Team from "./pages/Team/Team";
@@ -41,7 +41,7 @@ function App() {
           <Route path="/teams" element={<Team />} />
         </Route>
         {/* Application */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/demo" replace />} />
 
         <Route path="/dashboard" element={<Dashboard />} />
 
@@ -60,7 +60,8 @@ function App() {
           element={<MeetingRoom />}
         />
         <Route path="/meeting/join" element={<JoinMeeting />} />
-
+        <Route path="/demo" element={<PublicDemo />} /> 
+       
       </Routes>
     </BrowserRouter>
   

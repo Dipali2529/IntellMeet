@@ -2,6 +2,10 @@ const configuredApiUrl =
   import.meta.env.VITE_API_URL ||
   "https://intellmeet-server-lgxt.onrender.com";
 
-export const API_URL = `${configuredApiUrl.replace(/\/+$/, "")}/api`;
+const normalizedApiUrl = configuredApiUrl
+  .replace(/\/+$/, "")
+  .replace(/\/api$/i, "");
 
-export const SOCKET_URL = configuredApiUrl.replace(/\/+$/, "");
+export const API_URL = `${normalizedApiUrl}/api`;
+
+export const SOCKET_URL = normalizedApiUrl;

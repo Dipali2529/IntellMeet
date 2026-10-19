@@ -126,3 +126,51 @@ export async function getMyMeetings(): Promise<Meeting[]> {
 
   return data.meetings;
 }
+
+export async function createPublicDemoMeeting(
+  meetingData: CreateMeetingData
+): Promise<CreateMeetingResponse> {
+  const response = await fetch(`${API_URL}/public-demo`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: meetingData.title,
+      description: meetingData.description,
+      scheduledDate: meetingData.scheduledDate,
+      scheduledTime: meetingData.scheduledTime,
+      duration: meetingData.duration,
+      allowChat: meetingData.allowChat,
+      allowScreenShare: meetingData.allowScreenShare,
+      // Public demo meetings must not enable recording.
+      allowRecording: false,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to create demo meeting.");
+  }
+
+  return data;
+}
+
+export async function getPublicDemoMeetingByCode(
+  meetingCode: string
+): Promise<Meeting> {
+  const response = await fetch(
+    `${API_URL}/public-demo/code/${encodeURIComponent(
+      meetingCode.trim().toUpperCase()
+    )}`
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Public meeting not found.");
+  }
+
+  return data.meeting;
+}

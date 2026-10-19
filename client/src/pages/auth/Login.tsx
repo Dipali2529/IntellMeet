@@ -4,16 +4,6 @@ import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../../services/auth";
 
-// interface LoginResponse {
-//   message: string;
-//   accessToken: string;
-//   user: {
-//     id: string;
-//     name: string;
-//     email: string;
-//     role: string;
-//   };
-// }
 
 function Login() {
   const navigate = useNavigate();
@@ -133,6 +123,15 @@ function Login() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
+
+          {/* Public Live Demo - separate from login */}
+          <button
+            type="button"
+            onClick={() => navigate("/demo")}
+            className="mt-4 w-full rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-3 font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+          >
+            Try Live Demo (Without Login)
+          </button>
 
           {/* Signup */}
           <div className="mt-6 text-center text-sm text-slate-400">

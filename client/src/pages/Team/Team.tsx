@@ -8,11 +8,14 @@ interface TeamItem {
   _id: string;
   name: string;
   createdAt: string;
+  members: string[];
 }
+//import { API_URL as BASE_API_URL } from "../../config/api";
 
-import { API_URL as BASE_API_URL } from "../../config/api";
+import { API_URL } from "../../config/api";
 
-const API_URL = `${BASE_API_URL}/api/teams`;
+const TEAMS_API_URL = `${API_URL}/teams`;
+
 function Team() {
   const [teamName, setTeamName] = useState("");
   const [teams, setTeams] = useState<TeamItem[]>([]);
@@ -20,6 +23,8 @@ function Team() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingTeams, setLoadingTeams] = useState(true);
+  const [memberEmails, setMemberEmails] = useState<Record<string, string>>({});
+  const [addingMemberTo, setAddingMemberTo] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadTeams() {
@@ -32,7 +37,7 @@ function Team() {
       }
 
       try {
-        const response = await fetch(API_URL, {
+        const response = await fetch(TEAMS_API_URL, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -79,7 +84,7 @@ function Team() {
     setLoading(true);
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(TEAMS_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,6 +111,74 @@ function Team() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAddMember(
+    event: FormEvent<HTMLFormElement>,
+    teamId: string
+  ) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    const email = (memberEmails[teamId] || "").trim().toLowerCase();
+
+    if (!email) {
+      setError("Please enter the member's email address.");
+      return;
+    }
+
+    const token = getAccessToken();
+
+    if (!token) {
+      setError("Please log in before adding a member.");
+      return;
+    }
+
+    setAddingMemberTo(teamId);
+
+    try {
+      const response = await fetch(
+        `${TEAMS_API_URL}/${teamId}/members`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to add member.");
+      }
+
+      setMemberEmails((previous) => ({
+        ...previous,
+        [teamId]: "",
+      }));
+
+      setSuccess(data.message || "Member added successfully.");
+
+      // Reload teams so the updated member count is displayed.
+      const refreshResponse = await fetch(TEAMS_API_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (refreshResponse.ok) {
+        const refreshedData = await refreshResponse.json();
+        setTeams(refreshedData.teams || []);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to add member."
+      );
+    } finally {
+      setAddingMemberTo(null);
     }
   }
 
@@ -182,13 +255,42 @@ function Team() {
         {teams.length > 0 && (
           <ul>
             {teams.map((team) => (
+              
               <li key={team._id}>
                 <strong>{team.name}</strong>
+
                 <p>
-                  Created{" "}
-                  {new Date(team.createdAt).toLocaleDateString()}
+                  Created {new Date(team.createdAt).toLocaleDateString()}
                 </p>
+
+                <p>
+                  Members: {Array.isArray(team.members) ? team.members.length : 0}
+                </p>
+
+                <form onSubmit={(event) => handleAddMember(event, team._id)}>
+                  <input
+                    type="email"
+                    placeholder="Enter registered user's email"
+                    value={memberEmails[team._id] || ""}
+                    onChange={(event) =>
+                      setMemberEmails((previous) => ({
+                        ...previous,
+                        [team._id]: event.target.value,
+                      }))
+                    }
+                    required
+                    aria-label={`Email address for ${team.name}`}
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={addingMemberTo === team._id}
+                  >
+                    {addingMemberTo === team._id ? "Adding..." : "Add Member"}
+                  </button>
+                </form>
               </li>
+
             ))}
           </ul>
         )}
